@@ -1,19 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
+	"time"
+
+	"github.com/jeh727/sampleapp/internal/app"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, world!")
-	})
-
-	addr := ":8080"
-	log.Printf("starting server on %s", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("server failed: %v", err)
+	err := app.RunServer(":8080", 3*time.Second)
+	if err != nil {
+		log.Printf("server exiting with error: %v", err)
 	}
 }

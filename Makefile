@@ -1,38 +1,73 @@
 # Makefile for Go project
 GO ?= go
-CMD_DIR := cmd
-BIN_DIR := bin
+
+PROJECT_ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+CMD_DIR := $(PROJECT_ROOT)/cmd
+BIN_DIR := $(PROJECT_ROOT)/bin
+TOOLS_DIR := $(PROJECT_ROOT)/tools
+ALL_GO_FILES := $(PROJECT_ROOT)/...
 
 PROGS := $(shell for d in $(CMD_DIR)/*; do [ -d $$d ] && basename $$d || true; done)
 BINARIES := $(addprefix $(BIN_DIR)/,$(PROGS))
 
-.PHONY: all build test fmt vet tidy install run clean hooks
-
+.PHONY: all build test fmt vet tidy install run hooks hook-msg linter clean setup lint help gofumpt
 all: build
 
 ## build: Build all binaries in the cmd directory
-build: $(BINARIES)
+build: fmt lint test clean compile
+	@echo "Build complete. Binaries are located in the $(BIN_DIR) directory."
 
-$(BIN_DIR)/%:
+compile: $(BINARIES)
+
+$(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -o $@ ./$(CMD_DIR)/$*
 
-## hooks: Install git hooks
-hooks:
-	@echo "Installing git hooks..."
-	@curl -L https://cdn.rawgit.com/tommarshall/git-good-commit/v0.6.1/hook.sh > .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+$(BIN_DIR)/%: $(BIN_DIR)
+	$(GO) build -o $@ $(CMD_DIR)/$*
+
+## setup: Install git hooks, linters and other necessary tools for development
+setup: hooks linter $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/gofumpt
+	@echo "Project setup complete. Git hooks and linters installed."
+
+hooks: hook-msg .git/hooks/commit-msg
 	
+
+hook-msg:
+	@echo "Installing git hooks..." 
+
+.git/hooks/commit-msg:
+	@curl -L https://cdn.rawgit.com/tommarshall/git-good-commit/v0.6.1/hook.sh > .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+
+## linter: Install golangci-lint
+linter: $(TOOLS_DIR)/golangci-lint
+
+$(TOOLS_DIR)/golangci-lint:
+	@echo "Installing golangci-lint..."
+	@mkdir -p $(TOOLS_DIR)
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_DIR) v2.11.1
+
+
+
 ## test: Run all tests in the project
 test:
-	$(GO) test ./...
+	$(GO) test $(ALL_GO_FILES)
 
 ## fmt: Format all Go files in the project
-fmt:
-	$(GO) fmt ./...
+fmt: gofumpt
+	$(GO) fmt $(ALL_GO_FILES)
 
-## vet: Run go vet on all packages
-vet:
-	$(GO) vet ./...
+gofumpt: $(TOOLS_DIR)/gofumpt
+	$(TOOLS_DIR)/gofumpt -w -extra .
+
+$(TOOLS_DIR)/gofumpt:
+	@echo "Installing gofumpt..."
+	@mkdir -p $(TOOLS_DIR)
+	@GOBIN=$(TOOLS_DIR) $(GO) install mvdan.cc/gofumpt@latest
+
+## lint: Run golangci-lint on all packages
+lint: linter
+	$(TOOLS_DIR)/golangci-lint run $(ALL_GO_FILES)
 
 ## tidy: Clean up go.mod and go.sum files
 tidy:
@@ -40,14 +75,14 @@ tidy:
 
 ## install: Install all binaries to the GOPATH/bin
 install:
-	$(GO) install ./...
+	$(GO) install $(ALL_GO_FILES)
 
-## Run a program: make run NAME=<program> [ARGS="args..."]
+## make run NAME=<program> [ARGS="args..."]: Run a program from the cmd directory with optional arguments
 run:
 ifndef NAME
 	$(error NAME is not set. e.g., make run NAME=yourcmd)
 endif
-	$(GO) run ./$(CMD_DIR)/$(NAME) $(ARGS)
+	$(GO) run $(CMD_DIR)/$(NAME) $(ARGS)
 
 ## clean: Remove all built binaries
 clean:
@@ -55,8 +90,6 @@ clean:
 
 
 ## help: Display this help message
-.PHONY: help
-all: help
 help: Makefile
 	@echo
 	@echo " Usage: make [target]"
