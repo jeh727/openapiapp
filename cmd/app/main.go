@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/jeh727/sampleapp/internal/app"
+	"github.com/jeh727/openapiapp/internal/app"
 )
 
 func main() {

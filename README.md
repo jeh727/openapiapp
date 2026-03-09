@@ -1,2 +1,2 @@
-# sampleapp
-git repository scaffold and api generator
+# openapiapp
+OpenAPI with coding scaffold
