@@ -5,6 +5,7 @@ PROJECT_ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 CMD_DIR := $(PROJECT_ROOT)/cmd
 BIN_DIR := $(PROJECT_ROOT)/bin
 INTERNAL_DIR := $(PROJECT_ROOT)/internal
+API_DIR := $(PROJECT_ROOT)/api
 TOOLS_DIR := $(PROJECT_ROOT)/tools
 SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
 ALL_GO_FILES := $(PROJECT_ROOT)/...
@@ -33,7 +34,6 @@ setup: hooks linter $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/gofumpt $(TOOLS_DIR)
 
 hooks: hook-msg .git/hooks/commit-msg
 	
-
 hook-msg:
 	@echo "Installing git hooks..." 
 
@@ -50,7 +50,6 @@ $(TOOLS_DIR)/golangci-lint:
 	@echo "Installing golangci-lint..."
 	@mkdir -p $(TOOLS_DIR)
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_DIR) v2.11.1
-
 
 ## test: Run all tests in the project
 test:
@@ -85,7 +84,7 @@ ifndef NAME
 endif
 	rm -rf $(INTERNAL_DIR)/$(NAME)/$(NAME)api
 	mkdir -p $(INTERNAL_DIR)/$(NAME)/$(NAME)api
-	$(TOOLS_DIR)/oapi-codegen -generate types,client,spec,std-http -package $(NAME)api -o $(INTERNAL_DIR)/$(NAME)/$(NAME)api/api.gen.go api/$(NAME).yaml
+	$(TOOLS_DIR)/oapi-codegen -generate types,client,spec,std-http -package $(NAME)api -o $(INTERNAL_DIR)/$(NAME)/$(NAME)api/api.gen.go $(API_DIR)/$(NAME).yaml
 
 $(TOOLS_DIR)/oapi-codegen:
 	@echo "Installing oapi-codegen..."
